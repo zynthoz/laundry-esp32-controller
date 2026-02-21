@@ -2,8 +2,8 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
-const char* ssid     = WIFI_SSID;
-const char* password = WIFI_PASSWORD;
+const char* ssid     = "pi-test";
+const char* password = "12345678";
 #define SW_PIN 32
 
 WebServer server(80);
@@ -146,6 +146,8 @@ void handleNotFound() {
 
 void setup() {
   Serial.begin(115200);
+    Serial.begin(9600);
+  Serial.println("Booting...");
 
   pinMode(SW_PIN, OUTPUT);
   digitalWrite(SW_PIN, LOW);
@@ -155,7 +157,7 @@ void setup() {
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
+    Serial.print("nigga");
   }
 
   Serial.println("");
