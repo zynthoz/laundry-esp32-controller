@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LaundryLink Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* === TOKENS === */
+    :root {
+      --bg: #F5F6FA;
+      --card: #FFFFFF;
+      --card-border: #E3E4EA;
+      --sidebar-bg: #101018;
+      --sidebar-text: #8E8FA3;
+      --sidebar-text-hover: #C8C9D4;
+      --sidebar-text-active: #FFFFFF;
+      --sidebar-hover: #1A1A26;
+      --sidebar-active-bg: #1E1E2D;
+      --sidebar-active-border: #3B82F6;
+
+      --accent: #3B82F6;
+      --accent-hover: #2563EB;
+      --accent-subtle: #EFF4FF;
+
+      --text-primary: #101018;
+      --text-secondary: #52525B;
+      --text-muted: #A0A1AB;
+      --border: #E3E4EA;
+      --border-light: #F0F1F5;
+
+      /* Stat colors */
+      --stat-blue: #3B82F6;
+      --stat-emerald: #10B981;
+      --stat-amber: #F59E0B;
+      --stat-violet: #8B5CF6;
+
+      /* Status */
+      --status-idle-bg: #F0F1F5;
+      --status-idle-text: #52525B;
+      --status-running-bg: #DBEAFE;
+      --status-running-text: #1E40AF;
+      --status-completed-bg: #D1FAE5;
+      --status-completed-text: #065F46;
+      --status-offline-bg: #FEE2E2;
+      --status-offline-text: #991B1B;
+      --status-simulated-bg: #FEF3C7;
+      --status-simulated-text: #92400E;
+
+      --radius: 10px;
+      --radius-sm: 6px;
+      --radius-full: 9999px;
+      --sidebar-width: 248px;
+      --sidebar-collapsed: 72px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* === LAYOUT === */
+    .app-layout { display: flex; min-height: 100vh; }
+
+    /* === SIDEBAR === */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; height: 100vh;
+      z-index: 50;
+      transition: width 0.25s ease;
+      overflow: hidden;
+    }
+    .sidebar.collapsed { width: var(--sidebar-collapsed); }
+
+    .sidebar-header {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .sidebar-logo {
+      width: 30px; height: 30px; min-width: 30px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sidebar-logo svg { width: 18px; height: 18px; color: #fff; }
+    .sidebar-brand-text {
+      font-weight: 700; font-size: 15px; color: #fff;
+      letter-spacing: -0.3px;
+    }
+    .collapsed .sidebar-brand-text { display: none; }
+
+    .sidebar-toggle {
+      background: none; border: none; padding: 6px; cursor: pointer;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      color: var(--sidebar-text);
+      transition: color 0.15s;
+    }
+    .sidebar-toggle:hover { color: var(--sidebar-text-hover); }
+
+    .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+
+    .nav-section-label {
+      padding: 20px 20px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.25);
+    }
+    .collapsed .nav-section-label { display: none; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 16px; margin: 1px 8px;
+      border-radius: 7px; cursor: pointer;
+      color: var(--sidebar-text); font-size: 13.5px; font-weight: 500;
+      transition: all 0.12s; border: none; background: none;
+      width: calc(100% - 16px);
+      text-align: left; white-space: nowrap; overflow: hidden;
+      position: relative;
+    }
+    .nav-item:hover { color: var(--sidebar-text-hover); background: var(--sidebar-hover); }
+    .nav-item.active {
+      color: var(--sidebar-text-active);
+      background: var(--sidebar-active-bg);
+    }
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: -8px; top: 6px; bottom: 6px;
+      width: 3px;
+      background: var(--sidebar-active-border);
+      border-radius: 0 2px 2px 0;
+    }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+    .nav-item.active svg { opacity: 1; }
+    .collapsed .nav-label { display: none; }
+    .collapsed .nav-item { justify-content: center; padding: 10px; }
+    .collapsed .nav-item.active::before { display: none; }
+
+    .sidebar-footer {
+      padding: 16px; border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0;
+    }
+    .network-dot { display: flex; align-items: center; gap: 8px; }
+    .network-dot .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #10B981; animation: pulse-dot 2s infinite;
+    }
+    .network-dot span { font-size: 11px; color: var(--sidebar-text); }
+    .collapsed .network-dot span { display: none; }
+    .collapsed .network-dot { justify-content: center; }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* === MAIN === */
+    .main-content {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      transition: margin-left 0.25s ease;
+      overflow-y: auto;
+      min-height: 100vh;
+    }
+    .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed); }
+
+    /* === PAGES === */
+    .page { display: none; padding: 28px 32px; max-width: 1400px; }
+    .page.active { display: block; }
+    .page-title {
+      font-size: 26px; font-weight: 800; color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+    .page-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    .page-header { margin-bottom: 28px; }
+
+    /* === GRIDS === */
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    @media (max-width: 1024px) {
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .grid-3 { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+      .main-content { margin-left: 0 !important; }
+      .sidebar { display: none; }
+      .page { padding: 20px 16px; }
+    }
+
+    /* === CARDS === */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--card-border);
+      padding: 22px;
+    }
+
+    /* === STAT CARDS === */
+    .stat-card {
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+    }
+    .stat-card.blue::before { background: var(--stat-blue); }
+    .stat-card.emerald::before { background: var(--stat-emerald); }
+    .stat-card.amber::before { background: var(--stat-amber); }
+    .stat-card.violet::before { background: var(--stat-violet); }
+
+    .stat-label {
+      font-size: 12px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .stat-value {
+      font-size: 28px; font-weight: 800; color: var(--text-primary);
+      margin-top: 8px; letter-spacing: -0.5px;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-icon {
+      width: 40px; height: 40px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+    }
+    .stat-icon svg { width: 20px; height: 20px; }
+    .stat-icon.blue { background: #EFF4FF; color: var(--stat-blue); }
+    .stat-icon.emerald { background: #ECFDF5; color: var(--stat-emerald); }
+    .stat-icon.amber { background: #FFFBEB; color: var(--stat-amber); }
+    .stat-icon.violet { background: #F5F3FF; color: var(--stat-violet); }
+
+    /* === SECTION TITLES === */
+    .section-title {
+      font-size: 16px; font-weight: 700; color: var(--text-primary);
+      margin: 28px 0 14px;
+      letter-spacing: -0.2px;
+    }
+
+    /* === MACHINE CARDS === */
+    .machine-card-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .machine-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .machine-type-label {
+      font-size: 11px; font-weight: 500; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px;
+    }
+    .machine-icon {
+      width: 38px; height: 38px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .machine-icon svg { width: 20px; height: 20px; }
+    .machine-icon.washer { background: #EFF4FF; color: var(--stat-blue); }
+    .machine-icon.dryer { background: #FFF7ED; color: #EA580C; }
+    .machine-icon.running { animation: pulse-dot 1.5s infinite; }
+
+    .machine-status-dot {
+      display: flex; align-items: center; gap: 6px; margin-top: 6px;
+    }
+    .machine-status-dot .dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .machine-status-dot .dot.online { background: #10B981; }
+    .machine-status-dot .dot.offline { background: #EF4444; }
+    .machine-status-dot .dot.online-pulse { animation: pulse-dot 2s infinite; }
+    .machine-status-dot span {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .machine-status-dot span.online { color: #059669; }
+    .machine-status-dot span.offline { color: #DC2626; }
+
+    /* === BADGES === */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: var(--radius-full);
+      font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+    }
+    .badge-idle { background: var(--status-idle-bg); color: var(--status-idle-text); }
+    .badge-busy, .badge-running { background: var(--status-running-bg); color: var(--status-running-text); }
+    .badge-offline, .badge-error { background: var(--status-offline-bg); color: var(--status-offline-text); }
+    .badge-completed { background: var(--status-completed-bg); color: var(--status-completed-text); }
+    .badge-simulated { background: var(--status-simulated-bg); color: var(--status-simulated-text); }
+    .badge-failed { background: var(--status-offline-bg); color: var(--status-offline-text); }
+
+    .machine-countdown { text-align: center; padding: 10px 0; }
+    .countdown-time {
+      font-size: 26px; font-weight: 700; color: var(--text-primary);
+      font-variant-numeric: tabular-nums; letter-spacing: -0.5px;
+    }
+    .countdown-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* === BUTTONS === */
+    .btn-primary {
+      width: 100%; padding: 9px 16px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background 0.12s;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled {
+      background: var(--border); color: var(--text-muted); cursor: not-allowed;
+    }
+    .btn-stop {
+      width: 100%; padding: 9px 16px;
+      background: #FEE2E2; color: #991B1B;
+      border: none; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background 0.12s;
+    }
+    .btn-stop:hover { background: #FECACA; }
+    .btn-stop:disabled {
+      background: var(--border); color: var(--text-muted); cursor: not-allowed;
+    }
+    .machine-btns { display: flex; gap: 8px; }
+
+    .btn-filter {
+      padding: 7px 14px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      border: 1px solid var(--border); transition: all 0.12s;
+      background: var(--card); color: var(--text-secondary);
+    }
+    .btn-filter:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-filter.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+
+    /* === TABLE === */
+    .table-wrapper {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--card-border);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #FAFAFC; border-bottom: 1px solid var(--border); }
+    th {
+      padding: 11px 22px; text-align: left;
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    td { padding: 14px 22px; font-size: 13px; }
+    tbody tr { border-bottom: 1px solid var(--border-light); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #FAFAFC; }
+    .td-muted { color: var(--text-secondary); }
+    .td-bold { font-weight: 600; color: var(--text-primary); }
+
+    /* === FILTER BAR === */
+    .filter-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .search-input {
+      flex: 1; min-width: 200px;
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px; outline: none;
+      background: var(--card);
+      transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .filter-buttons { display: flex; gap: 6px; }
+
+    /* === SUMMARY === */
+    .summary-label { font-size: 13px; color: var(--text-secondary); }
+    .summary-value {
+      font-size: 22px; font-weight: 700; color: var(--text-primary);
+      margin-top: 4px;
+    }
+
+    /* === ANALYTICS === */
+    .date-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .chart-card canvas { width: 100% !important; height: auto; }
+    .metric-card-value {
+      font-size: 26px; font-weight: 800; color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+    .metric-card-label {
+      font-size: 12px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    /* === PROGRESS BAR === */
+    .progress-row { margin-bottom: 14px; }
+    .progress-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .progress-name { font-size: 13px; color: var(--text-secondary); }
+    .progress-pct { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .progress-track {
+      width: 100%; height: 6px; background: var(--border-light);
+      border-radius: var(--radius-full);
+    }
+    .progress-fill {
+      height: 6px; background: var(--accent);
+      border-radius: var(--radius-full);
+      transition: width 0.5s ease;
+    }
+
+    /* === SETTINGS === */
+    .machine-selector {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px;
+    }
+    .machine-sel-btn {
+      padding: 14px 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--card);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s;
+    }
+    .machine-sel-btn:hover { border-color: var(--accent); }
+    .machine-sel-btn.selected { border-color: var(--accent); background: var(--accent-subtle); }
+    .machine-sel-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .machine-sel-type { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+    .slider-group { margin-bottom: 22px; }
+    .slider-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .slider-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+    .slider-value { font-size: 13px; font-weight: 700; color: var(--accent); }
+    input[type="range"] {
+      width: 100%; height: 6px;
+      background: var(--border-light);
+      border-radius: 3px;
+      appearance: none; -webkit-appearance: none;
+      outline: none; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .slider-range {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: var(--text-muted); margin-top: 4px;
+    }
+    .calc-box {
+      background: var(--accent-subtle);
+      border-radius: var(--radius-sm); padding: 16px;
+      margin-bottom: 22px;
+      border: 1px solid #DBEAFE;
+    }
+    .calc-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
+    .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .calc-label { font-size: 11px; color: var(--text-secondary); }
+    .calc-value { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+
+    .net-info-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .net-info-row:last-child { border-bottom: none; }
+    .net-info-label { font-size: 13px; color: var(--text-secondary); }
+    .net-info-value { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .net-connected { color: #059669; display: flex; align-items: center; gap: 6px; }
+    .net-connected .dot { width: 7px; height: 7px; border-radius: 50%; background: #10B981; }
+
+    /* === LOCATIONS PAGE === */
+    .location-card {
+      position: relative;
+      overflow: hidden;
+    }
+    .location-card-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .location-name {
+      font-size: 16px; font-weight: 700; color: var(--text-primary);
+      letter-spacing: -0.2px;
+    }
+    .location-id {
+      font-size: 11px; font-weight: 500; color: var(--text-muted);
+      margin-top: 2px; font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .location-icon {
+      width: 38px; height: 38px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      background: #F5F3FF; color: var(--stat-violet);
+      flex-shrink: 0;
+    }
+    .location-icon svg { width: 20px; height: 20px; }
+    .location-details {
+      display: flex; flex-direction: column; gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-light);
+    }
+    .location-detail-row {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .location-detail-label {
+      font-size: 12px; color: var(--text-muted); font-weight: 500;
+    }
+    .location-detail-value {
+      font-size: 12px; font-weight: 600; color: var(--text-primary);
+    }
+    .location-machine-counts {
+      display: flex; gap: 12px; margin-top: 4px;
+    }
+    .location-machine-count {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 10px;
+      background: var(--border-light);
+      border-radius: var(--radius-full);
+      font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    }
+    .location-machine-count .count-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+    }
+    .count-dot.washer { background: var(--stat-blue); }
+    .count-dot.dryer { background: #EA580C; }
+
+    /* === EMPTY STATE === */
+    .empty-state {
+      text-align: center; padding: 48px 24px;
+      color: var(--text-muted); font-size: 13px;
+    }
+
+    /* === UTILITY === */
+    .mb-16 { margin-bottom: 16px; }
+    .mb-24 { margin-bottom: 24px; }
+    .mt-24 { margin-top: 24px; }
+    .space-y > * + * { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- === SIDEBAR === -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <div class="sidebar-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="2" width="16" height="20" rx="2"/>
+              <circle cx="12" cy="13" r="5"/>
+              <circle cx="12" cy="13" r="2"/>
+              <circle cx="7" cy="5" r="1" fill="currentColor"/>
+              <circle cx="10" cy="5" r="1" fill="currentColor"/>
+            </svg>
+          </div>
+          <span class="sidebar-brand-text">LaundryLink</span>
+        </div>
+        <button class="sidebar-toggle" onclick="toggleSidebar()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12" stroke-linecap="round"/>
+            <line x1="3" y1="6" x2="21" y2="6" stroke-linecap="round"/>
+            <line x1="3" y1="18" x2="21" y2="18" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Overview</div>
+        <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+          </svg>
+          <span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-item" id="nav-analytics" onclick="showPage('analytics')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10" stroke-linecap="round"/>
+            <line x1="12" y1="20" x2="12" y2="4" stroke-linecap="round"/>
+            <line x1="6" y1="20" x2="6" y2="14" stroke-linecap="round"/>
+          </svg>
+          <span class="nav-label">Analytics</span>
+        </button>
+        <button class="nav-item" id="nav-transactions" onclick="showPage('transactions')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6" stroke-linecap="round"/>
+            <line x1="8" y1="12" x2="21" y2="12" stroke-linecap="round"/>
+            <line x1="8" y1="18" x2="21" y2="18" stroke-linecap="round"/>
+            <line x1="3" y1="6" x2="3.01" y2="6" stroke-linecap="round" stroke-width="3"/>
+            <line x1="3" y1="12" x2="3.01" y2="12" stroke-linecap="round" stroke-width="3"/>
+            <line x1="3" y1="18" x2="3.01" y2="18" stroke-linecap="round" stroke-width="3"/>
+          </svg>
+          <span class="nav-label">Transactions</span>
+        </button>
+
+        <div class="nav-section-label">Manage</div>
+        <button class="nav-item" id="nav-locations" onclick="showPage('locations')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          <span class="nav-label">Locations</span>
+        </button>
+        <button class="nav-item" id="nav-settings" onclick="showPage('settings')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.4 4.4l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.4-4.4l4.2-4.2" stroke-linecap="round"/>
+          </svg>
+          <span class="nav-label">Settings</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="network-dot">
+          <div class="dot"></div>
+          <span>Connected</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- === MAIN CONTENT === -->
+    <main class="main-content">
+
+      <!-- ===== PAGE: DASHBOARD ===== -->
+      <section id="page-dashboard" class="page active space-y">
+        <div class="page-header">
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">Monitor your laundry operations in real-time</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid-4">
+          <div class="card stat-card blue">
+            <div class="stat-icon blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23" stroke-linecap="round"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="stat-label">Today's Revenue</div>
+            <div class="stat-value">&#8369;{{ stats.today_revenue }}</div>
+          </div>
+          <div class="card stat-card emerald">
+            <div class="stat-icon emerald">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 2v6h-6M3 22v-6h6M21 8A10 10 0 0 0 5.6 5.6M3 16a10 10 0 0 0 15.4 2.4" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="stat-label">Total Cycles</div>
+            <div class="stat-value">{{ stats.total_transactions }}</div>
+          </div>
+          <div class="card stat-card amber">
+            <div class="stat-icon amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="stat-label">Active Machines</div>
+            <div class="stat-value" id="active-machines-stat">
+              {% set active = machines|selectattr('status', 'equalto', 'BUSY')|list|length %}
+              {{ active }}/{{ machines|length }}
+            </div>
+          </div>
+          <div class="card stat-card violet">
+            <div class="stat-icon violet">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <div class="stat-label">Locations</div>
+            <div class="stat-value">{{ stats.location_count }}</div>
+          </div>
+        </div>
+
+        <!-- Machine Status -->
+        <h2 class="section-title">Machine Status</h2>
+        {% if machines %}
+        <div class="grid-4">
+          {% for m in machines %}
+          <div class="card" id="machine-card-{{ m.id }}-{{ m.location_id }}">
+            <div class="machine-card-top">
+              <div>
+                <div class="machine-name">{{ m.name }}</div>
+                <div class="machine-type-label">{{ m.type|capitalize }}</div>
+                <div class="machine-status-dot" id="status-dot-{{ m.id }}-{{ m.location_id }}">
+                  <div class="dot" id="dot-{{ m.id }}-{{ m.location_id }}" style="background:var(--text-muted)"></div>
+                  <span id="dot-label-{{ m.id }}-{{ m.location_id }}" style="color:var(--text-muted)">Checking...</span>
+                </div>
+              </div>
+              <div class="machine-icon {{ m.type }} {{ 'running' if m.status == 'BUSY' else '' }}">
+                {% if m.type == 'washer' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="4" y="2" width="16" height="20" rx="2"/>
+                  <circle cx="12" cy="13" r="5"/>
+                  <circle cx="12" cy="13" r="2"/>
+                  <circle cx="7" cy="5" r="1" fill="currentColor"/>
+                  <circle cx="10" cy="5" r="1" fill="currentColor"/>
+                </svg>
+                {% else %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="4" y="2" width="16" height="20" rx="2"/>
+                  <circle cx="12" cy="13" r="5"/>
+                  <path d="M12 8v10M8 13h8" stroke-linecap="round"/>
+                  <circle cx="7" cy="5" r="1" fill="currentColor"/>
+                  <circle cx="10" cy="5" r="1" fill="currentColor"/>
+                </svg>
+                {% endif %}
+              </div>
+            </div>
+
+            <div>
+              {% if m.status == 'BUSY' %}
+              <span class="badge badge-busy">RUNNING</span>
+              {% elif m.status == 'OFFLINE' %}
+              <span class="badge badge-offline">OFFLINE</span>
+              {% else %}
+              <span class="badge badge-idle">IDLE</span>
+              {% endif %}
+            </div>
+
+            <div class="machine-countdown">
+              <div class="countdown-time" id="countdown-{{ m.id }}-{{ m.location_id }}">--:--</div>
+              <div class="countdown-label">Time Remaining</div>
+            </div>
+
+            <div class="machine-btns">
+              <button class="btn-primary"
+                      id="start-btn-{{ m.id }}-{{ m.location_id }}"
+                      onclick="startMachine('{{ m.id }}', '{{ m.location_id }}', this)"
+                      {{ 'disabled' if m.status in ['BUSY', 'OFFLINE'] else '' }}>
+                {% if m.status == 'BUSY' %}Running...{% elif m.status == 'OFFLINE' %}Offline{% else %}START{% endif %}
+              </button>
+              <button class="btn-stop"
+                      id="stop-btn-{{ m.id }}-{{ m.location_id }}"
+                      onclick="stopMachine('{{ m.id }}', '{{ m.location_id }}', this)"
+                      {{ 'disabled' if m.status != 'BUSY' else '' }}>
+                STOP
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="card empty-state">
+          No machines registered yet. Start the Pi to sync machine data.
+        </div>
+        {% endif %}
+      </section>
+
+      <!-- ===== PAGE: ANALYTICS ===== -->
+      <section id="page-analytics" class="page space-y">
+        <div class="date-bar">
+          <div class="page-header" style="margin-bottom:0">
+            <h1 class="page-title">Analytics</h1>
+            <p class="page-subtitle">Track performance and insights</p>
+          </div>
+          <div class="filter-buttons">
+            <button class="btn-filter" onclick="setDateRange('today', this)">Today</button>
+            <button class="btn-filter" onclick="setDateRange('7d', this)">This Week</button>
+            <button class="btn-filter active" onclick="setDateRange('30d', this)">This Month</button>
+          </div>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="grid-3">
+          <div class="card">
+            <div class="metric-card-label">Total Revenue</div>
+            <div class="metric-card-value" id="analytics-revenue">&#8369;{{ analytics.total_revenue }}</div>
+          </div>
+          <div class="card">
+            <div class="metric-card-label">Total Cycles</div>
+            <div class="metric-card-value" id="analytics-cycles">{{ analytics.total_cycles }}</div>
+          </div>
+          <div class="card">
+            <div class="metric-card-label">Avg per Cycle</div>
+            <div class="metric-card-value" id="analytics-avg">&#8369;{{ analytics.avg_per_cycle }}</div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid-2">
+          <div class="card">
+            <h3 style="font-weight:700;color:var(--text-primary);margin-bottom:16px;font-size:14px">Revenue Trend</h3>
+            <canvas id="revenue-chart" width="600" height="300"></canvas>
+          </div>
+          <div class="card">
+            <h3 style="font-weight:700;color:var(--text-primary);margin-bottom:16px;font-size:14px">Cycle Count</h3>
+            <canvas id="cycles-chart" width="600" height="300"></canvas>
+          </div>
+        </div>
+
+        <!-- Machine Usage -->
+        <div class="card">
+          <h3 style="font-weight:700;color:var(--text-primary);margin-bottom:16px;font-size:14px">Machine Usage Breakdown</h3>
+          <div id="machine-usage-bars">
+            {% if analytics.machine_usage %}
+              {% set max_cycles = analytics.machine_usage[0].cycles if analytics.machine_usage else 1 %}
+              {% for mu in analytics.machine_usage %}
+              <div class="progress-row">
+                <div class="progress-header">
+                  <span class="progress-name">{{ mu.name or mu.machine_id }}</span>
+                  <span class="progress-pct">{{ mu.cycles }} cycles</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" style="width: {{ (mu.cycles / max_cycles * 100) if max_cycles > 0 else 0 }}%"></div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-state">No usage data yet.</div>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== PAGE: TRANSACTIONS ===== -->
+      <section id="page-transactions" class="page space-y">
+        <div class="page-header">
+          <h1 class="page-title">Transaction Log</h1>
+          <p class="page-subtitle">View all laundry transactions</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="card" style="padding:14px">
+          <div class="filter-bar">
+            <input type="text" id="txn-search" class="search-input" placeholder="Search by ID or Machine..." oninput="filterTransactions()">
+            <div class="filter-buttons">
+              <button class="btn-filter active" data-status="ALL" onclick="setTxnFilter('ALL', this)">ALL</button>
+              <button class="btn-filter" data-status="COMPLETED" onclick="setTxnFilter('COMPLETED', this)">COMPLETED</button>
+              <button class="btn-filter" data-status="SIMULATED" onclick="setTxnFilter('SIMULATED', this)">SIMULATED</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="card">
+          <div class="summary-label">Showing <strong id="txn-count">{{ transactions|length }}</strong> transactions</div>
+          <div class="summary-value" id="txn-total">Total: &#8369;{{ transactions|selectattr('status', 'equalto', 'COMPLETED')|map(attribute='amount')|sum }}</div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrapper">
+          {% if transactions %}
+          <div style="overflow-x:auto">
+            <table id="txn-table">
+              <thead>
+                <tr>
+                  <th>Transaction ID</th>
+                  <th>Timestamp</th>
+                  <th>Machine</th>
+                  <th>Location</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for t in transactions %}
+                <tr data-status="{{ t.status }}" data-search="{{ t.id }} {{ t.machine_id }} {{ t.location_name|lower }}">
+                  <td class="td-bold">{{ t.id[:8] }}...</td>
+                  <td class="td-muted">{{ t.started_at }}</td>
+                  <td>{{ t.machine_id }}</td>
+                  <td class="td-muted">{{ t.location_name }}</td>
+                  <td class="td-bold">&#8369;{{ t.amount }}</td>
+                  <td>
+                    <span class="badge badge-{{ t.status|lower }}">{{ t.status }}</span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="empty-state">No transactions yet. Start a machine from the Pi to see data here.</div>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- ===== PAGE: LOCATIONS ===== -->
+      <section id="page-locations" class="page space-y">
+        <div class="page-header">
+          <h1 class="page-title">Locations</h1>
+          <p class="page-subtitle">All laundromat sites assigned to your account</p>
+        </div>
+
+        {% if locations %}
+        <div class="grid-3" id="locations-grid">
+          {% for loc in locations %}
+          <div class="card location-card" data-location-id="{{ loc.id }}">
+            <div class="location-card-header">
+              <div>
+                <div class="location-name">{{ loc.name }}</div>
+                <div class="location-id">{{ loc.id }}</div>
+              </div>
+              <div class="location-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+              </div>
+            </div>
+            <div class="location-details">
+              <div class="location-detail-row">
+                <span class="location-detail-label">Pi URL</span>
+                <span class="location-detail-value">{{ loc.pi_url or 'Not set' }}</span>
+              </div>
+              <div class="location-detail-row">
+                <span class="location-detail-label">Machines</span>
+                <span class="location-detail-value" id="loc-machine-count-{{ loc.id }}">—</span>
+              </div>
+              <div class="location-machine-counts" id="loc-machine-types-{{ loc.id }}"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="card empty-state">
+          No locations assigned to your account yet.
+        </div>
+        {% endif %}
+      </section>
+
+      <!-- ===== PAGE: SETTINGS ===== -->
+      <section id="page-settings" class="page space-y">
+        <div class="page-header">
+          <h1 class="page-title">Settings</h1>
+          <p class="page-subtitle">Configure machine pulse parameters</p>
+        </div>
+
+        <!-- Machine Selector -->
+        <div class="card">
+          <h3 style="font-weight:700;color:var(--text-primary);margin-bottom:14px;font-size:14px">Select Machine</h3>
+          {% if machines %}
+          <div class="machine-selector">
+            {% for m in machines %}
+            <button class="machine-sel-btn" onclick="selectMachineSettings('{{ m.id }}', '{{ m.location_id }}', this)">
+              <div class="machine-sel-name">{{ m.name }}</div>
+              <div class="machine-sel-type">{{ m.type }}</div>
+            </button>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">No machines to configure.</div>
+          {% endif %}
+        </div>
+
+        <!-- Pulse Configuration -->
+        <div id="settings-panel" style="display:none">
+          <div class="card">
+            <h3 style="font-weight:700;color:var(--text-primary);margin-bottom:22px;font-size:14px" id="settings-machine-title">
+              Pulse Configuration
+            </h3>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span class="slider-label">Pulse ON Duration (ms)</span>
+                <span class="slider-value" id="pulse-on-val">50ms</span>
+              </div>
+              <input type="range" id="pulse-on" min="50" max="3000" step="50" value="50" oninput="updateSettings()">
+              <div class="slider-range"><span>50ms</span><span>3000ms</span></div>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span class="slider-label">Pulse OFF Duration (ms)</span>
+                <span class="slider-value" id="pulse-off-val">50ms</span>
+              </div>
+              <input type="range" id="pulse-off" min="50" max="3000" step="50" value="50" oninput="updateSettings()">
+              <div class="slider-range"><span>50ms</span><span>3000ms</span></div>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span class="slider-label">Number of Pulses</span>
+                <span class="slider-value" id="pulse-count-val">2 pulses</span>
+              </div>
+              <input type="range" id="pulse-count" min="1" max="20" step="1" value="2" oninput="updateSettings()">
+              <div class="slider-range"><span>1</span><span>20</span></div>
+            </div>
+
+            <div class="calc-box">
+              <div class="calc-title">Calculated Values</div>
+              <div class="calc-grid">
+                <div>
+                  <div class="calc-label">Total Duration</div>
+                  <div class="calc-value" id="calc-duration">200ms</div>
+                </div>
+                <div>
+                  <div class="calc-label">Estimated Cost</div>
+                  <div class="calc-value" id="calc-cost">&#8369;10</div>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn-primary" onclick="saveSettings()">Save Configuration</button>
+          </div>
+
+          <!-- Network Info -->
+          <div class="card mt-24">
+            <h3 style="font-weight:700;color:var(--text-primary);margin-bottom:14px;font-size:14px">Network Information</h3>
+            <div id="net-info">
+              <div class="net-info-row">
+                <span class="net-info-label">Machine ID</span>
+                <span class="net-info-value" id="net-machine-id">--</span>
+              </div>
+              <div class="net-info-row">
+                <span class="net-info-label">Location</span>
+                <span class="net-info-value" id="net-location">--</span>
+              </div>
+              <div class="net-info-row">
+                <span class="net-info-label">Type</span>
+                <span class="net-info-value" id="net-type">--</span>
+              </div>
+              <div class="net-info-row">
+                <span class="net-info-label">Connection Status</span>
+                <span class="net-info-value net-connected"><div class="dot"></div> Connected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // ===== DATA FROM SERVER =====
+    const machinesData = {{ machines_json|safe }};
+    const locationsData = {{ locations_json|safe }};
+    let currentAnalytics = {{ analytics_json|safe }};
+
+    // ===== PAGE SWITCHING =====
+    const PAGES = ['dashboard', 'analytics', 'transactions', 'locations', 'settings'];
+    let currentPage = 'dashboard';
+
+    function showPage(name) {
+      PAGES.forEach(p => {
+        document.getElementById('page-' + p).classList.toggle('active', p === name);
+        document.getElementById('nav-' + p).classList.toggle('active', p === name);
+      });
+      currentPage = name;
+      if (name === 'analytics') {
+        setTimeout(drawCharts, 50);
+      }
+      if (name === 'locations') {
+        populateLocationMachineCounts();
+      }
+    }
+
+    // ===== SIDEBAR TOGGLE =====
+    let sidebarCollapsed = false;
+
+    function toggleSidebar() {
+      sidebarCollapsed = !sidebarCollapsed;
+      document.getElementById('sidebar').classList.toggle('collapsed', sidebarCollapsed);
+      if (currentPage === 'analytics') {
+        setTimeout(drawCharts, 350);
+      }
+    }
+
+    // ===== LOCATIONS PAGE =====
+    function populateLocationMachineCounts() {
+      locationsData.forEach(loc => {
+        const locMachines = machinesData.filter(m => m.location_id === loc.id);
+        const washers = locMachines.filter(m => m.type === 'washer').length;
+        const dryers = locMachines.filter(m => m.type === 'dryer').length;
+
+        const countEl = document.getElementById('loc-machine-count-' + loc.id);
+        if (countEl) countEl.textContent = locMachines.length;
+
+        const typesEl = document.getElementById('loc-machine-types-' + loc.id);
+        if (typesEl) {
+          let html = '';
+          if (washers > 0) {
+            html += '<div class="location-machine-count"><div class="count-dot washer"></div>' + washers + ' Washer' + (washers > 1 ? 's' : '') + '</div>';
+          }
+          if (dryers > 0) {
+            html += '<div class="location-machine-count"><div class="count-dot dryer"></div>' + dryers + ' Dryer' + (dryers > 1 ? 's' : '') + '</div>';
+          }
+          if (locMachines.length === 0) {
+            html = '<span style="font-size:11px;color:var(--text-muted)">No machines synced</span>';
+          }
+          typesEl.innerHTML = html;
+        }
+      });
+    }
+
+    // ===== MACHINE START =====
+    const timers = {};
+
+    function formatTime(seconds) {
+      if (seconds <= 0) return '--:--';
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
+    }
+
+    function getMachineDuration(machineId) {
+      const m = machinesData.find(x => x.id === machineId);
+      return (m && m.type === 'dryer') ? 30 * 60 : 45 * 60;
+    }
+
+    function startMachine(machineId, locationId, btn) {
+      btn.disabled = true;
+      btn.textContent = 'STARTING...';
+
+      fetch('/dashboard/machine/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ machine_id: machineId, location_id: locationId })
+      })
+      .then(r => r.json().then(data => ({ status: r.status, data })))
+      .then(({ status, data }) => {
+        if (data.status === 'COMPLETED' || data.status === 'SIMULATED') {
+          btn.textContent = 'Running...';
+          setCardRunning(machineId, locationId);
+          startCountdown(machineId, locationId, getMachineDuration(machineId));
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'START';
+          alert('Failed: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        btn.textContent = 'START';
+        alert('Network error: ' + err.message);
+      });
+    }
+
+    // ===== MACHINE STOP =====
+    function stopMachine(machineId, locationId, btn) {
+      btn.disabled = true;
+      btn.textContent = 'STOPPING...';
+
+      fetch('/dashboard/machine/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ machine_id: machineId, location_id: locationId })
+      })
+      .then(r => r.json().then(data => ({ status: r.status, data })))
+      .then(({ status, data }) => {
+        if (data.status === 'STOPPED') {
+          setCardIdle(machineId, locationId);
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'STOP';
+          alert('Failed: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        btn.textContent = 'STOP';
+        alert('Network error: ' + err.message);
+      });
+    }
+
+    // ===== CARD STATE HELPERS =====
+    function setCardRunning(machineId, locationId) {
+      const key = machineId + '-' + locationId;
+      const card = document.getElementById('machine-card-' + key);
+      if (!card) return;
+      const badge = card.querySelector('.badge');
+      if (badge) { badge.className = 'badge badge-busy'; badge.textContent = 'RUNNING'; }
+      const icon = card.querySelector('.machine-icon');
+      if (icon) icon.classList.add('running');
+      const startBtn = document.getElementById('start-btn-' + key);
+      if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Running...'; }
+      const stopBtn = document.getElementById('stop-btn-' + key);
+      if (stopBtn) { stopBtn.disabled = false; stopBtn.textContent = 'STOP'; }
+    }
+
+    function setCardIdle(machineId, locationId) {
+      const key = machineId + '-' + locationId;
+      if (timers[key]) { clearInterval(timers[key]); delete timers[key]; }
+      const el = document.getElementById('countdown-' + key);
+      if (el) el.textContent = '--:--';
+      const card = document.getElementById('machine-card-' + key);
+      if (!card) return;
+      const badge = card.querySelector('.badge');
+      if (badge) { badge.className = 'badge badge-idle'; badge.textContent = 'IDLE'; }
+      const icon = card.querySelector('.machine-icon');
+      if (icon) icon.classList.remove('running');
+      const startBtn = document.getElementById('start-btn-' + key);
+      if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'START'; }
+      const stopBtn = document.getElementById('stop-btn-' + key);
+      if (stopBtn) { stopBtn.disabled = true; stopBtn.textContent = 'STOP'; }
+    }
+
+    function startCountdown(machineId, locationId, durationSeconds) {
+      const key = machineId + '-' + locationId;
+      const el = document.getElementById('countdown-' + key);
+      if (!el) return;
+      let remaining = durationSeconds;
+      el.textContent = formatTime(remaining);
+      if (timers[key]) clearInterval(timers[key]);
+      timers[key] = setInterval(() => {
+        remaining--;
+        el.textContent = formatTime(remaining);
+        if (remaining <= 0) {
+          setCardIdle(machineId, locationId);
+        }
+      }, 1000);
+    }
+
+    // Start countdowns for already-busy machines
+    machinesData.forEach(m => {
+      if (m.status === 'BUSY') {
+        const dur = m.type === 'dryer' ? 30 * 60 : 45 * 60;
+        setCardRunning(m.id, m.location_id);
+        startCountdown(m.id, m.location_id, dur);
+      }
+    });
+
+    // ===== LIVE ESP32 STATUS POLLING =====
+    function updateLiveStatus() {
+      fetch('/dashboard/machines/live-status')
+        .then(r => {
+          if (!r.ok) throw new Error('status ' + r.status);
+          return r.json();
+        })
+        .then(statusMap => {
+          machinesData.forEach(m => {
+            const liveStatus = statusMap[m.id];
+            const dot = document.getElementById('dot-' + m.id + '-' + m.location_id);
+            const label = document.getElementById('dot-label-' + m.id + '-' + m.location_id);
+            if (!dot || !label) return;
+
+            if (!liveStatus || liveStatus === 'OFFLINE') {
+              dot.className = 'dot offline';
+              dot.style = '';
+              label.className = 'offline';
+              label.style = '';
+              label.textContent = 'Offline';
+            } else {
+              dot.className = 'dot online online-pulse';
+              dot.style = '';
+              label.className = 'online';
+              label.style = '';
+              label.textContent = 'Online';
+            }
+          });
+        })
+        .catch(() => {
+          machinesData.forEach(m => {
+            const dot = document.getElementById('dot-' + m.id + '-' + m.location_id);
+            const label = document.getElementById('dot-label-' + m.id + '-' + m.location_id);
+            if (!dot || !label) return;
+            dot.className = 'dot offline';
+            dot.style = '';
+            label.className = 'offline';
+            label.style = '';
+            label.textContent = 'Pi Unreachable';
+          });
+        });
+    }
+
+    updateLiveStatus();
+    setInterval(updateLiveStatus, 15000);
+
+    // ===== TRANSACTION FILTER =====
+    let txnStatusFilter = 'ALL';
+
+    function setTxnFilter(status, btn) {
+      txnStatusFilter = status;
+      document.querySelectorAll('#page-transactions .btn-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      filterTransactions();
+    }
+
+    function filterTransactions() {
+      const search = document.getElementById('txn-search').value.toLowerCase();
+      const rows = document.querySelectorAll('#txn-table tbody tr');
+      let count = 0;
+      let total = 0;
+
+      rows.forEach(row => {
+        const searchData = row.getAttribute('data-search') || '';
+        const rowStatus = row.getAttribute('data-status');
+        const matchSearch = !search || searchData.toLowerCase().includes(search);
+        const matchStatus = txnStatusFilter === 'ALL' || rowStatus === txnStatusFilter;
+        const visible = matchSearch && matchStatus;
+        row.style.display = visible ? '' : 'none';
+        if (visible) {
+          count++;
+          if (rowStatus === 'COMPLETED') {
+            const amtCell = row.cells[4];
+            if (amtCell) {
+              const amt = parseInt(amtCell.textContent.replace(/[^\d]/g, '')) || 0;
+              total += amt;
+            }
+          }
+        }
+      });
+
+      document.getElementById('txn-count').textContent = count;
+      document.getElementById('txn-total').innerHTML = 'Total: &#8369;' + total;
+    }
+
+    // ===== ANALYTICS =====
+    function setDateRange(preset, btn) {
+      document.querySelectorAll('#page-analytics .btn-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const today = new Date();
+      let start = '', end = today.toISOString().slice(0, 10);
+
+      switch (preset) {
+        case 'today': start = end; break;
+        case '7d':
+          start = new Date(today.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+          break;
+        case '30d':
+          start = new Date(today.getTime() - 30 * 86400000).toISOString().slice(0, 10);
+          break;
+      }
+
+      let url = '/dashboard/analytics';
+      const params = [];
+      if (start) params.push('start=' + start);
+      if (end) params.push('end=' + end);
+      if (params.length) url += '?' + params.join('&');
+
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          currentAnalytics = data;
+          document.getElementById('analytics-revenue').innerHTML = '&#8369;' + data.total_revenue;
+          document.getElementById('analytics-cycles').textContent = data.total_cycles;
+          document.getElementById('analytics-avg').innerHTML = '&#8369;' + data.avg_per_cycle;
+          drawCharts();
+          updateUsageBars();
+        });
+    }
+
+    function updateUsageBars() {
+      const container = document.getElementById('machine-usage-bars');
+      const usage = currentAnalytics.machine_usage || [];
+      if (usage.length === 0) {
+        container.innerHTML = '<div class="empty-state">No usage data for this period.</div>';
+        return;
+      }
+      const maxCycles = Math.max(...usage.map(u => u.cycles), 1);
+      container.innerHTML = usage.map(u => {
+        const pct = Math.round((u.cycles / maxCycles) * 100);
+        return '<div class="progress-row">' +
+          '<div class="progress-header">' +
+            '<span class="progress-name">' + (u.name || u.machine_id) + '</span>' +
+            '<span class="progress-pct">' + u.cycles + ' cycles</span>' +
+          '</div>' +
+          '<div class="progress-track">' +
+            '<div class="progress-fill" style="width:' + pct + '%"></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // ===== CANVAS CHARTS =====
+    function drawCharts() {
+      drawRevenueChart();
+      drawCyclesChart();
+    }
+
+    function drawRevenueChart() {
+      const canvas = document.getElementById('revenue-chart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const data = currentAnalytics.revenue_by_day || [];
+      const W = canvas.width, H = canvas.height;
+      const pad = { top: 20, right: 20, bottom: 40, left: 60 };
+      const cW = W - pad.left - pad.right;
+      const cH = H - pad.top - pad.bottom;
+
+      ctx.clearRect(0, 0, W, H);
+
+      if (data.length === 0) {
+        ctx.fillStyle = '#A0A1AB';
+        ctx.font = '13px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('No revenue data', W / 2, H / 2);
+        return;
+      }
+
+      const maxVal = Math.max(...data.map(d => d.revenue), 1);
+      const points = data.map((d, i) => ({
+        x: pad.left + (data.length === 1 ? cW / 2 : (i / (data.length - 1)) * cW),
+        y: pad.top + cH - (d.revenue / maxVal) * cH,
+      }));
+
+      // Grid
+      ctx.strokeStyle = '#E3E4EA';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = pad.top + (i / 4) * cH;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+        ctx.fillStyle = '#A0A1AB'; ctx.font = '10px Inter'; ctx.textAlign = 'right';
+        ctx.fillText(Math.round(maxVal * (1 - i / 4)) + ' P', pad.left - 8, y + 4);
+      }
+
+      // Fill area
+      ctx.fillStyle = 'rgba(59,130,246,0.06)';
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, pad.top + cH);
+      points.forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.lineTo(points[points.length - 1].x, pad.top + cH);
+      ctx.closePath(); ctx.fill();
+
+      // Line
+      ctx.strokeStyle = '#3B82F6';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.stroke();
+
+      // Dots
+      ctx.fillStyle = '#3B82F6';
+      points.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill(); });
+
+      // X labels
+      ctx.fillStyle = '#A0A1AB'; ctx.font = '10px Inter'; ctx.textAlign = 'center';
+      const step = Math.max(1, Math.ceil(data.length / 7));
+      data.forEach((d, i) => {
+        if (i % step === 0) {
+          const x = pad.left + (data.length === 1 ? cW / 2 : (i / (data.length - 1)) * cW);
+          ctx.fillText(d.day.slice(5), x, H - 10);
+        }
+      });
+    }
+
+    function drawCyclesChart() {
+      const canvas = document.getElementById('cycles-chart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const data = currentAnalytics.cycles_by_day || [];
+      const W = canvas.width, H = canvas.height;
+      const pad = { top: 20, right: 20, bottom: 40, left: 60 };
+      const cW = W - pad.left - pad.right;
+      const cH = H - pad.top - pad.bottom;
+
+      ctx.clearRect(0, 0, W, H);
+
+      if (data.length === 0) {
+        ctx.fillStyle = '#A0A1AB';
+        ctx.font = '13px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('No cycle data', W / 2, H / 2);
+        return;
+      }
+
+      const maxVal = Math.max(...data.map(d => d.cycles), 1);
+
+      // Grid
+      ctx.strokeStyle = '#E3E4EA';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = pad.top + (i / 4) * cH;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+        ctx.fillStyle = '#A0A1AB'; ctx.font = '10px Inter'; ctx.textAlign = 'right';
+        ctx.fillText(Math.round(maxVal * (1 - i / 4)), pad.left - 8, y + 4);
+      }
+
+      // Bars
+      const barGap = 4;
+      const barW = Math.max(4, (cW / data.length) - barGap);
+      ctx.fillStyle = '#10B981';
+      data.forEach((d, i) => {
+        const x = pad.left + (i / data.length) * cW + barGap / 2;
+        const barH = (d.cycles / maxVal) * cH;
+        const y = pad.top + cH - barH;
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, barH, [3, 3, 0, 0]);
+        ctx.fill();
+      });
+
+      // X labels
+      ctx.fillStyle = '#A0A1AB'; ctx.font = '10px Inter'; ctx.textAlign = 'center';
+      const step = Math.max(1, Math.ceil(data.length / 7));
+      data.forEach((d, i) => {
+        if (i % step === 0) {
+          const x = pad.left + (i / data.length) * cW + barW / 2;
+          ctx.fillText(d.day.slice(5), x, H - 10);
+        }
+      });
+    }
+
+    // ===== SETTINGS =====
+    let selectedSettingsMachine = null;
+
+    function selectMachineSettings(machineId, locationId, btn) {
+      const machine = machinesData.find(m => m.id === machineId && m.location_id === locationId);
+      if (!machine) return;
+      selectedSettingsMachine = machine;
+
+      document.querySelectorAll('.machine-sel-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+
+      document.getElementById('settings-panel').style.display = 'block';
+      document.getElementById('settings-machine-title').textContent =
+        'Pulse Configuration — ' + machine.name + ' (' + machine.type + ')';
+
+      document.getElementById('pulse-on').value = machine.pulse_on || 50;
+      document.getElementById('pulse-off').value = machine.pulse_off || 50;
+      document.getElementById('pulse-count').value = machine.pulse_count || 2;
+      updateSettings();
+
+      document.getElementById('net-machine-id').textContent = machine.id;
+      document.getElementById('net-location').textContent = machine.location_name;
+      document.getElementById('net-type').textContent = machine.type;
+    }
+
+    function updateSettings() {
+      const on = parseInt(document.getElementById('pulse-on').value);
+      const off = parseInt(document.getElementById('pulse-off').value);
+      const count = parseInt(document.getElementById('pulse-count').value);
+
+      document.getElementById('pulse-on-val').textContent = on + 'ms';
+      document.getElementById('pulse-off-val').textContent = off + 'ms';
+      document.getElementById('pulse-count-val').textContent = count + ' pulses';
+
+      const totalMs = (on + off) * count;
+      document.getElementById('calc-duration').textContent = (totalMs / 1000).toFixed(2) + 's';
+      document.getElementById('calc-cost').innerHTML = '&#8369;' + (count * 5);
+    }
+
+    function saveSettings() {
+      if (!selectedSettingsMachine) return;
+      const data = {
+        machine_id: selectedSettingsMachine.id,
+        location_id: selectedSettingsMachine.location_id,
+        pulse_on: parseInt(document.getElementById('pulse-on').value),
+        pulse_off: parseInt(document.getElementById('pulse-off').value),
+        pulse_count: parseInt(document.getElementById('pulse-count').value),
+      };
+
+      fetch('/dashboard/machine/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      .then(r => r.json())
+      .then(res => {
+        alert('Configuration saved. Note: Settings are managed via Pi .env file.');
+      })
+      .catch(err => alert('Error: ' + err.message));
+    }
+  </script>
+</body>
+</html>
